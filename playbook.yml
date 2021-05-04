@@ -1,0 +1,136 @@
+- hosts: localhost
+  become: yes
+  vars:
+    default_editor: vim
+    user: daniel
+    dotfiles:
+      repo: 'git@github.com:djonasson/dotfiles.git'
+      version: master
+    ssh_key: '.ssh/id_ed25519'
+    oh_my_zsh_directory: "/home/{{ user }}/.oh-my-zsh"
+    oh_my_zsh_plugins: "dotenv git gitflow nvm npm npx node tmux"
+
+  tasks:
+    - name: "Install system packages"
+      apt: 
+        name:
+          - autojump
+          - bat
+            #- chrome
+          - cifs-utils
+            #- code
+          - curl
+            #- exa
+          - exuberant-ctags
+          - fonts-powerline
+          - gcc
+            #- gimp
+          - git
+          - git-flow
+          - htop
+          - make
+            #- net_tools
+            #- nfs-common
+            #- nfs-server
+          - perl
+            #- pgadmin3
+            #- postgresql
+            #- postgresql-common
+          - python
+            #- rbenv
+            #- ruby-build
+            #- ruby-dev
+            #- samba
+            #- samba-common
+            #- snapd
+          - tmux
+          - vim
+          - zsh
+        state: latest
+
+    - name: oh-my-zsh directory reference
+      stat:
+        path: "{{ oh_my_zsh_directory }}"
+      register: oh_my_zsh_reference
+  
+    #- debug:
+    #    msg: "oh-my-zsh directory exists"
+    #  when: oh_my_zsh_reference.stat.exists and oh_my_zsh_reference.stat.isdir
+    #
+    #- debug:
+    #    msg: "oh-my-zsh directory doesn't exist"
+    #  when: not oh_my_zsh_reference.stat.exists
+
+    #- name: Remove oh-my-zsh folder (to force re-install)
+    #  file:
+    #    path: "{{ oh_my_zsh_directory }}"
+    #    state: absent
+
+    - name: Install oh-my-zsh if it hasn't been done already
+      shell: 'sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended'
+      environment:
+        HOME: "/home/{{ user }}"
+        USERNAME: "{{user }}"
+      when: not oh_my_zsh_reference.stat.exists
+      become: false
+
+    - name: Update oh-my-zsh if it was previously installed
+      shell: ". {{ oh_my_zsh_directory }}/lib/cli.zsh && omz update"
+      args:
+        executable: /bin/zsh
+      #environment:
+      #  HOME: "/home/{{ user }}"
+      #  USERNAME: "{{user }}"
+      when: oh_my_zsh_reference.stat.exists and oh_my_zsh_reference.stat.isdir
+      become: false
+
+    - name: "Check out dotfiles from repository"
+      git:
+        repo: "{{ dotfiles.repo }}"
+        dest: "/home/{{ user }}/.dotfiles"
+        accept_hostkey: yes
+        key_file: "/home/{{ user }}/{{ ssh_key }}"
+        force: yes
+        version: "{{ dotfiles.version }}"
+      #delegate_to: localhost
+      #run_once: true
+      become: no
+
+    - name: "Install ansible plugins"
+      command: "ansible-galaxy collection install community.general"
+    #- name: "Set default git editor (add a setting to ~/.gitconfig)"
+    #  community.general.git_config:
+    #    name: core.editor
+    #    scope: global
+    #    value: "{{ default_editor }}"
+    #      tasks:
+
+    - name: "Install nvm"
+      shell: 'sh -c "$(wget -O- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh)"'
+      #environment:
+      become: false
+
+    - name: "Add customizations to .zshrc file"
+      blockinfile:
+        path: "/home/{{ user }}/.zshrc"
+        block: |
+          if [ -f "/home/{{ user }}/.dotfiles/.aliases" ]; then
+            . "/home/{{ user }}/.dotfiles/.aliases"
+          fi
+          if [ -f "/home/{{ user }}/.dotfiles/.exports" ]; then
+            . "/home/{{ user }}/.dotfiles/.exports"
+          fi
+          if [ -f "/home/{{ user }}/.dotfiles/.personal" ]; then
+            . "/home/{{ user }}/.dotfiles/.personal"
+          fi
+          export NVM_DIR="/home/{{ user }}/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+    - name: "Link .zlogin from our .dotfiles checkout"
+      ansible.builtin.file:
+        src: "/home/{{ user }}/.dotfiles/.zlogin"
+        dest: "/home/{{ user }}/.zlogin"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        state: link
