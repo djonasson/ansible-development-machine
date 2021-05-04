@@ -11,7 +11,7 @@
     oh_my_zsh_plugins:
       - dotenv
       - git
-      - gitflow
+      - git-flow
       - nvm
       - npm
       - npx
