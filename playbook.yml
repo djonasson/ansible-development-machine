@@ -8,7 +8,15 @@
       version: master
     ssh_key: '.ssh/id_ed25519'
     oh_my_zsh_directory: "/home/{{ user }}/.oh-my-zsh"
-    oh_my_zsh_plugins: "dotenv git gitflow nvm npm npx node tmux"
+    oh_my_zsh_plugins:
+      - dotenv
+      - git
+      - gitflow
+      - nvm
+      - npm
+      - npx
+      - node
+      - tmux
 
   tasks:
     - name: "Install system packages"
@@ -98,6 +106,7 @@
 
     - name: "Install ansible plugins"
       command: "ansible-galaxy collection install community.general"
+
     #- name: "Set default git editor (add a setting to ~/.gitconfig)"
     #  community.general.git_config:
     #    name: core.editor
@@ -107,7 +116,10 @@
 
     - name: "Install nvm"
       shell: 'sh -c "$(wget -O- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh)"'
-      #environment:
+      become: false
+
+    - name: "Install current LTS version of node"
+      shell: "npm install --lts"
       become: false
 
     - name: "Add customizations to .zshrc file"
@@ -127,6 +139,12 @@
           [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
           [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
+    - name: "Set oh-my-zsh plugins in .zshrc file"
+      lineinfile:
+        path: "/home/{{ user }}/.zshrc"
+        regexp: '^plugins='
+        line: "plugins=({{ oh_my_zsh_plugins | join(' ') }})"
+
     - name: "Link .zlogin from our .dotfiles checkout"
       ansible.builtin.file:
         src: "/home/{{ user }}/.dotfiles/.zlogin"
@@ -134,3 +152,16 @@
         owner: "{{ user }}"
         group: "{{ user }}"
         state: link
+
+    - name: "Install Visual Studio Code"
+      shell: |
+        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+        install -o root -g root -m 644 packages.microsoft.gpg /etc/apt/trusted.gpg.d/
+        sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/trusted.gpg.d/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list'
+        rm -f packages.microsoft.gpg
+        apt install apt-transport-https
+        apt update
+        apt install code
+      args:
+        creates: "/usr/bin/code"
+      become: true
