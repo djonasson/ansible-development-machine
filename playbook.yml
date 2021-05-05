@@ -17,6 +17,16 @@
       - npx
       - node
       - tmux
+    vscode_extensions:
+      - christian-kohler.npm-intellisense
+      - christian-kohler.path-intellisense
+      - dbaeumer.vscode-eslint
+      - eg2.vscode-npm-script
+      - esbenp.prettier-vscode
+      - jasonnutter.search-node-modules
+      - ms-azuretools.vscode-docker
+      - waderyan.nodejs-extension-pack
+      - xabikos.JavaScriptSnippets
 
   tasks:
     - name: "Install system packages"
@@ -35,9 +45,10 @@
             #- gimp
           - git
           - git-flow
+          - gnome-tweaks
           - htop
           - make
-            #- net_tools
+          - net-tools
             #- nfs-common
             #- nfs-server
           - perl
@@ -52,6 +63,7 @@
             #- samba-common
             #- snapd
           - tmux
+          - traceroute
           - vim
           - zsh
         state: latest
@@ -61,26 +73,13 @@
         path: "{{ oh_my_zsh_directory }}"
       register: oh_my_zsh_reference
   
-    #- debug:
-    #    msg: "oh-my-zsh directory exists"
-    #  when: oh_my_zsh_reference.stat.exists and oh_my_zsh_reference.stat.isdir
-    #
-    #- debug:
-    #    msg: "oh-my-zsh directory doesn't exist"
-    #  when: not oh_my_zsh_reference.stat.exists
-
-    #- name: Remove oh-my-zsh folder (to force re-install)
-    #  file:
-    #    path: "{{ oh_my_zsh_directory }}"
-    #    state: absent
-
     - name: Install oh-my-zsh if it hasn't been done already
       shell: 'sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended'
-      environment:
-        HOME: "/home/{{ user }}"
-        USERNAME: "{{user }}"
+      #environment:
+      #  HOME: "/home/{{ user }}"
+      #  USERNAME: "{{user }}"
       when: not oh_my_zsh_reference.stat.exists
-      become: false
+      become: no
 
     - name: Update oh-my-zsh if it was previously installed
       shell: ". {{ oh_my_zsh_directory }}/lib/cli.zsh && omz update"
@@ -90,7 +89,7 @@
       #  HOME: "/home/{{ user }}"
       #  USERNAME: "{{user }}"
       when: oh_my_zsh_reference.stat.exists and oh_my_zsh_reference.stat.isdir
-      become: false
+      become: no
 
     - name: "Check out dotfiles from repository"
       git:
@@ -106,21 +105,29 @@
 
     - name: "Install ansible plugins"
       command: "ansible-galaxy collection install community.general"
+      become: no
 
-    #- name: "Set default git editor (add a setting to ~/.gitconfig)"
-    #  community.general.git_config:
-    #    name: core.editor
-    #    scope: global
-    #    value: "{{ default_editor }}"
-    #      tasks:
+    - name: "Set default git editor (add a setting to ~/.gitconfig)"
+      community.general.git_config:
+        name: core.editor
+        scope: global
+        value: "{{ default_editor }}"
+    
+    - name: "Is nvm installed?"
+      shell: "command -v nvm"
+      register: nvm_path
+      ignore_errors: yes
+      become: no
 
     - name: "Install nvm"
       shell: 'sh -c "$(wget -O- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh)"'
-      become: false
+      when: nvm_path.stdout == ""
+      become: no
 
     - name: "Install current LTS version of node"
-      shell: "npm install --lts"
-      become: false
+      shell: "nvm install --lts"
+      ignore_errors: yes
+      become: no
 
     - name: "Add customizations to .zshrc file"
       blockinfile:
@@ -164,4 +171,38 @@
         apt install code
       args:
         creates: "/usr/bin/code"
-      become: true
+      become: yes
+
+    - name: "List of installed Visual Studio Code Extensions"
+      command: code --list-extensions
+      register: installed_vscode_extensions
+      become: no
+
+    - name: "Install Visual Studio Code Extensions"
+      command: "code --install-extension {{ item }} --force"
+      with_items: "{{ vscode_extensions }}"
+      when: item not in installed_vscode_extensions.stdout_lines
+      become: no
+     
+    - name: "Is Google Chrome installed?"
+      shell: "command -v google-chrome"
+      register: google_chrome_path
+
+    - name: "Download Google Chrome .deb file"
+      get_url:
+        url: https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+        dest: "/home/{{ user }}/google-chrome-stable_current_amd64.deb"
+        mode: '0440'
+      args:
+        creates: "/home/{{ user }}/google-chrome-stable_current_amd64.deb"
+      when: google_chrome_path == ""
+
+    - name: "Install Google Chrome"
+      command: "dpkg -i /home/{{ user }}/google-chrome-stable_current_amd64.deb"
+      when: google_chrome_path == ""
+      become: yes
+
+    - name: "Remove Google Chrome .deb file"
+      command: "rm /home/{{ user }}/google-chrome-stable_current_amd64.deb"
+      when: google_chrome_path == ""
+      become: yes
