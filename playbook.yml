@@ -34,6 +34,7 @@
         name:
           - autojump
           - bat
+          - build-essential
             #- chrome
           - cifs-utils
             #- code
@@ -156,6 +157,14 @@
       ansible.builtin.file:
         src: "/home/{{ user }}/.dotfiles/.zlogin"
         dest: "/home/{{ user }}/.zlogin"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        state: link
+    
+    - name: "Link .tmux.conf from our .dotfiles checkout"
+      ansible.builtin.file:
+        src: "/home/{{ user }}/.dotfiles/.tmux.conf"
+        dest: "/home/{{ user }}/.tmux.conf"
         owner: "{{ user }}"
         group: "{{ user }}"
         state: link
