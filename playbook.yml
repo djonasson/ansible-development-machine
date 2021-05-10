@@ -39,6 +39,7 @@
           - cifs-utils
             #- code
           - curl
+          - default-jre
             #- exa
           - exuberant-ctags
           - fonts-powerline
