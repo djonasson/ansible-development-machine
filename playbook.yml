@@ -1,5 +1,7 @@
 - hosts: localhost
+  
   become: yes
+
   vars:
     default_editor: vim
     user: daniel
@@ -21,10 +23,12 @@
       - christian-kohler.npm-intellisense
       - christian-kohler.path-intellisense
       - dbaeumer.vscode-eslint
+      - eamodio.gitlens
       - eg2.vscode-npm-script
       - esbenp.prettier-vscode
       - jasonnutter.search-node-modules
       - ms-azuretools.vscode-docker
+      - vscodevim.vim
       - waderyan.nodejs-extension-pack
       - xabikos.JavaScriptSnippets
 
