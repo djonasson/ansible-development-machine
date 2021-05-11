@@ -173,6 +173,22 @@
         owner: "{{ user }}"
         group: "{{ user }}"
         state: link
+    
+    - name: "Link .vimrc from our .dotfiles checkout"
+      ansible.builtin.file:
+        src: "/home/{{ user }}/.dotfiles/.vimrc"
+        dest: "/home/{{ user }}/.vimrc"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        state: link
+    
+    - name: "Link .vimrc.bundles from our .dotfiles checkout"
+      ansible.builtin.file:
+        src: "/home/{{ user }}/.dotfiles/.vimrc.bundles"
+        dest: "/home/{{ user }}/.vimrc.bundles"
+        owner: "{{ user }}"
+        group: "{{ user }}"
+        state: link
 
     - name: "Install Visual Studio Code"
       shell: |
