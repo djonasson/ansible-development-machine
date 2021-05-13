@@ -1,5 +1,5 @@
 - hosts: localhost
-  
+
   become: yes
 
   vars:
@@ -8,6 +8,10 @@
     dotfiles:
       repo: 'git@github.com:djonasson/dotfiles.git'
       version: master
+    vundle:
+      repo: 'https://github.com/VundleVim/Vundle.vim.git'
+      version: master
+      install_dir: "/home/{{ user }}/.vim/bundle/Vundle.vim"
     ssh_key: '.ssh/id_ed25519'
     oh_my_zsh_directory: "/home/{{ user }}/.oh-my-zsh"
     oh_my_zsh_plugins:
@@ -34,7 +38,7 @@
 
   tasks:
     - name: "Install system packages"
-      apt: 
+      apt:
         name:
           - autojump
           - bat
@@ -62,9 +66,9 @@
             #- postgresql
             #- postgresql-common
           - python
-            #- rbenv
-            #- ruby-build
-            #- ruby-dev
+          - rbenv
+          - ruby-build
+          - ruby-dev
             #- samba
             #- samba-common
             #- snapd
@@ -78,7 +82,7 @@
       stat:
         path: "{{ oh_my_zsh_directory }}"
       register: oh_my_zsh_reference
-  
+
     - name: Install oh-my-zsh if it hasn't been done already
       shell: 'sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended'
       #environment:
@@ -109,6 +113,15 @@
       #run_once: true
       become: no
 
+    - name: "Check out vundle from repository"
+      git:
+        repo: "{{ vundle.repo }}"
+        dest: "{{ vundle.install_dir }}"
+        accept_hostkey: yes
+        force: yes
+        version: "{{ vundle.version }}"
+      become: no
+
     - name: "Install ansible plugins"
       command: "ansible-galaxy collection install community.general"
       become: no
@@ -118,7 +131,7 @@
         name: core.editor
         scope: global
         value: "{{ default_editor }}"
-    
+
     - name: "Is nvm installed?"
       shell: "command -v nvm"
       register: nvm_path
@@ -165,7 +178,7 @@
         owner: "{{ user }}"
         group: "{{ user }}"
         state: link
-    
+
     - name: "Link .tmux.conf from our .dotfiles checkout"
       ansible.builtin.file:
         src: "/home/{{ user }}/.dotfiles/.tmux.conf"
@@ -173,7 +186,7 @@
         owner: "{{ user }}"
         group: "{{ user }}"
         state: link
-    
+
     - name: "Link .vimrc from our .dotfiles checkout"
       ansible.builtin.file:
         src: "/home/{{ user }}/.dotfiles/.vimrc"
@@ -181,7 +194,7 @@
         owner: "{{ user }}"
         group: "{{ user }}"
         state: link
-    
+
     - name: "Link .vimrc.bundles from our .dotfiles checkout"
       ansible.builtin.file:
         src: "/home/{{ user }}/.dotfiles/.vimrc.bundles"
@@ -213,7 +226,7 @@
       with_items: "{{ vscode_extensions }}"
       when: item not in installed_vscode_extensions.stdout_lines
       become: no
-     
+
     - name: "Is Google Chrome installed?"
       shell: "command -v google-chrome"
       register: google_chrome_path
