@@ -40,12 +40,12 @@
     - name: "Install system packages"
       apt:
         name:
+          - apt-transport-https
           - autojump
           - bat
           - build-essential
-            #- chrome
+          - ca-certificates
           - cifs-utils
-            #- code
           - curl
           - default-jre
             #- exa
@@ -56,6 +56,7 @@
           - git
           - git-flow
           - gnome-tweaks
+          - gnupg
           - htop
           - make
           - net-tools
