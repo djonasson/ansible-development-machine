@@ -20,7 +20,7 @@
       - git-flow
       - nvm
       - npm
-      - npx
+      #- npx
       - node
       - tmux
     vscode_extensions:
